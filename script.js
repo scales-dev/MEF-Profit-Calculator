@@ -1,43 +1,57 @@
 (async () => {
-    console.log(getRelevantTable(PDFViewerApplication.pdfDocument));
+    const table = await getRelevantTable(PDFViewerApplication.pdfDocument);
+    console.log(table);
 
     async function getRelevantTable(pdf) {
-        let lines = [];
-        let lineContent = [];
+        const lines = [];
+        let line = [];
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+            const page = await pdf.getPage(pageNumber);
             const content = await page.getTextContent();
 
-            for (const i of content.items) {
-                const string = i.str.trim();
-                if (string) lineContent.push(string);
+            for (const item of content.items) {
+                const text = item.str.trim();
 
-                if (i.hasEOL) {
-                    lines.push(lineContent);
-                    lineContent = [];
+                if (text) line.push(text);
+                if (item.hasEOL) {
+                    lines.push(line);
+                    line = [];
                 }
             }
         }
 
         const relevantLines = lines.filter(line => line.length > 1);
 
+        const lineText = relevantLines
+            .map((line, index) => `${index}: ${line.join(" | ")}`)
+            .join("\n");
+
         const firstLine = Number(prompt(
             "What is the first line containing product data?\n\n" +
-            relevantLines.map((line, i) => `${i}: ${line.join(" | ")}`).join("\n")
+            lineText
         ));
+
+        const remainingLines = relevantLines
+            .slice(firstLine + 1)
+            .map((line, index) => `${index + firstLine + 1}: ${line.join(" | ")}`)
+            .join("\n");
 
         const lastLine = Number(prompt(
             "What is the last line containing product data?\n\n" +
-            relevantLines.slice(firstLine+1).map((line, i) => `${i+firstLine+1}: ${line.join(" | ")}`).join("\n")
+            remainingLines
         ));
 
-        const categoryTitles = relevantLines.at(firstLine-1).map((line, i) => `${i}: ${line}`);
+        const tableLines = relevantLines.slice(firstLine, lastLine + 1);
+
+        const columnTitles = relevantLines[firstLine - 1];
 
         const columnInput = prompt(
-            "Enter the index of the columns which represent the following:\n" +
+            "Enter the index of the columns which represent:\n" +
             "Product Name, Quantity, Individual Price\n\n" +
-            categoryTitles.join("\n") +
+            columnTitles
+                .map((title, index) => `${index}: ${title}`)
+                .join("\n") +
             "\n\neg: 1, 3, 4"
         );
 
@@ -45,32 +59,33 @@
             .split(",")
             .map(column => Number(column.trim()));
 
-        const tableLines = relevantLines.slice(firstLine, lastLine);
-        tableLines.sort((a, b) => a.length - b.length);
+        const rowLengths = tableLines.map(line => line.length);
+        const minRowWidth = Math.min(...rowLengths);
+        const maxRowWidth = Math.max(...rowLengths);
 
-        const minRowWidth = tableLines.at(0).length;
-        const maxRowWidth = tableLines.at(tableLines.length-1).length;
-        const optionalColumns = maxRowWidth - minRowWidth;
+        const optionalColumnCount = maxRowWidth - minRowWidth;
 
-        let optionalColumnIndex = 0;
-        if (optionalColumns) optionalColumnIndex = Number(
-            prompt(
-                `${optionalColumns} column found which does not always have a value.\n` +
+        let optionalColumnIndex = null;
+
+        if (optionalColumnCount > 0) {
+            optionalColumnIndex = Number(prompt(
+                `${optionalColumnCount} column found which does not always have a value.\n` +
                 "Please input the index of the column in the list:\n" +
-                `${categoryTitles.filter((title, i) => !columns.includes(i)).join("\n")}`
-            )
-        );
+                columnTitles
+                    .filter((_, index) => !columns.includes(index))
+                    .map((title, index) => `${index}: ${title}`)
+                    .join("\n")
+            ));
+        }
 
-        return relevantLines
-            .slice(firstLine, lastLine)
-            .map(line => {
-                // add an empty value where the optional column is missing
-                if (line.length < maxRowWidth) {
-                    line.splice(optionalColumnIndex, 0, "");
-                }
+        return tableLines.map(line => {
+            const row = [...line];
 
-                // then get the three selected columns, thats all we care for
-                return columns.map(column => line[column]);
-            });
+            // add an empty value where the optional column is missing
+            if (row.length < maxRowWidth) row.splice(optionalColumnIndex, 0, "");
+
+            // then get the three selected columns, thats all we care for
+            return columns.map(column => row[column]);
+        });
     }
 })();
