@@ -42,50 +42,73 @@
             remainingLines
         ));
 
-        const tableLines = relevantLines.slice(firstLine, lastLine + 1);
-
-        const columnTitles = relevantLines[firstLine - 1];
-
-        const columnInput = prompt(
-            "Enter the index of the columns which represent:\n" +
-            "Product Name, Quantity, Individual Price\n\n" +
-            columnTitles
-                .map((title, index) => `${index}: ${title}`)
-                .join("\n") +
-            "\n\neg: 1, 3, 4"
-        );
-
-        const columns = columnInput
-            .split(",")
-            .map(column => Number(column.trim()));
+        let tableLines = relevantLines.slice(firstLine, lastLine + 1);
 
         const rowLengths = tableLines.map(line => line.length);
         const minRowWidth = Math.min(...rowLengths);
         const maxRowWidth = Math.max(...rowLengths);
-
         const optionalColumnCount = maxRowWidth - minRowWidth;
+
+        const maxWidthRows = tableLines
+            .filter(line => line.length === maxRowWidth)
+            .map(line => `${line.map((value, index) => `${index}: ${value}`).join("\n")}`)
+            .join("\n\n");
 
         let optionalColumnIndex = null;
 
         if (optionalColumnCount > 0) {
             optionalColumnIndex = Number(prompt(
                 `${optionalColumnCount} column found which does not always have a value.\n` +
-                "Please input the index of the column in the list:\n" +
-                columnTitles
-                    .filter((_, index) => !columns.includes(index))
-                    .map((title, index) => `${index}: ${title}`)
-                    .join("\n")
+                "Please input the index of a column to ignore:\n\n" +
+                maxWidthRows
             ));
         }
 
-        return tableLines.map(line => {
+        tableLines = tableLines.map(line => {
             const row = [...line];
 
             // add an empty value where the optional column is missing
             if (row.length < maxRowWidth) row.splice(optionalColumnIndex, 0, "");
 
-            // then get the three selected columns, thats all we care for
-            return columns.map(column => row[column]);
+            return row;
+        });
+
+        const columnInput = prompt(
+            "Enter the index of the columns which represent:\n" +
+            "Product Name, Quantity, Total Price\n\n" +
+            "eg: 1, 3, 4. \n" +
+            "If one heading spans multiple columns separate with a /\n" +
+            "eg: 0/1, 2/3, 4\n\n" +
+            maxWidthRows
+        );
+
+        const [nameInput, quantityInput, priceInput] = columnInput
+            .split(",")
+            .map(column => column.trim());
+
+        const columns = {
+            name: nameInput
+                .split("/")
+                .map(column => Number(column.trim())),
+            quantity: quantityInput
+                .split("/")
+                .map(column => Number(column.trim())),
+            price: priceInput.replaceAll(/[^0-9]/g, "")
+        };
+
+        return tableLines.map(line => {
+            const row = [...line];
+
+            return {
+                name: columns.name
+                    .map(column => row[column])
+                    .join(" - ")
+                    .trim(),
+                quantity: columns.quantity
+                    .map(column => Number(row[column]))
+                    .reduce((total, value) => total * value, 1),
+                price: row[columns.price]
+            };
         });
     }
 })();
