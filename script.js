@@ -1,6 +1,11 @@
 (async () => {
     const table = await getRelevantTable(PDFViewerApplication.pdfDocument);
-    console.log(table);
+
+    const excelOutput = table
+        .map(row => `${row.name}\t${row.quantity}\t${row.price}`)
+        .join("\n");
+
+    console.log(excelOutput);
 
     async function getRelevantTable(pdf) {
         const lines = [];
@@ -49,18 +54,16 @@
         const maxRowWidth = Math.max(...rowLengths);
         const optionalColumnCount = maxRowWidth - minRowWidth;
 
-        const maxWidthRows = tableLines
-            .filter(line => line.length === maxRowWidth)
-            .map(line => `${line.map((value, index) => `${index}: ${value}`).join("\n")}`)
-            .join("\n\n");
-
         let optionalColumnIndex = null;
 
         if (optionalColumnCount > 0) {
             optionalColumnIndex = Number(prompt(
                 `${optionalColumnCount} column found which does not always have a value.\n` +
-                "Please input the index of a column to ignore:\n\n" +
-                maxWidthRows
+                "Please input the index of the missing column:\n\n" +
+                tableLines
+                    .toSorted((a, b) => b.length - a.length)
+                    .map(line => `${line.map((value, index) => `${index}: ${value}`).join("\n")}`)
+                    .join("\n\n")
             ));
         }
 
@@ -79,8 +82,10 @@
             "eg: 1, 3, 4. \n" +
             "If one heading spans multiple columns separate with a /\n" +
             "eg: 0/1, 2/3, 4\n\n" +
-            maxWidthRows
-        );
+            tableLines
+                .map(line => `${line.map((value, index) => `${index}: ${value}`).join("\n")}`)
+                .join("\n\n")
+    );
 
         const [nameInput, quantityInput, priceInput] = columnInput
             .split(",")
@@ -93,7 +98,7 @@
             quantity: quantityInput
                 .split("/")
                 .map(column => Number(column.trim())),
-            price: priceInput.replaceAll(/[^0-9]/g, "")
+            price: priceInput
         };
 
         return tableLines.map(line => {
@@ -107,7 +112,7 @@
                 quantity: columns.quantity
                     .map(column => Number(row[column]))
                     .reduce((total, value) => total * value, 1),
-                price: row[columns.price]
+                price: Number(row[columns.price].replace(" 0", "").replace(/[^0-9.-]/g, ""))
             };
         });
     }
