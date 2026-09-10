@@ -21,16 +21,17 @@ What originally sounded like a small simple project is shaping up to be pretty b
     - When downloading a PDF from an email it opens it in the browser anyway
     - It is very easy to get the text from a PDF with JavaScript on firefox
     - It is easy to use the script, just press "ctrl+shift+i" click console and paste the script
-- Read PDF
+- [Read PDF](https://github.com/scales-dev/MEF-Profit-Calculator/blob/master/parse_invoice.js)
   - Get supplier name 
   - Find the lines representing the table of what we bought
     - Determine which columns are "product name", "quantity" and "individual price"
-- Compare prices
+- [Compare prices](https://github.com/scales-dev/MEF-Profit-Calculator/blob/master/form_spreadsheet.ts)
   - Get the actual products we bought as their names would be on the website 
     - Get this from a spreadsheet which maps the names the supplier calls them, to the name and quantity our website uses
-  - Compare the cost price to the sale price to get the profit margin
   - Output a CSV table with each product and expected profit
-  - Compare the cost price per product to the cost last time we bought and output a table of changes.
+    - Keep track of price change history
+    - Highlight high price markups
+
 
 I hope that explains simply how it works. 
 Decomposition is key when starting a project, it helps me a lot to write down an exact plan to follow.
